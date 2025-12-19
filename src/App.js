@@ -1,9 +1,15 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 
 const FormPage = () => {
   const navigate = useNavigate();
-  const [showPwd, setShowPwd] = useState(false);
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -18,52 +24,80 @@ const FormPage = () => {
     aadhaar: "",
   });
 
-  const errors = {
-    firstName: !form.firstName,
-    lastName: !form.lastName,
-    username: !form.username,
-    email: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email),
-    password: form.password.length < 6,
-    phone: form.phone.length < 10,
-    country: !form.country,
-    city: !form.city,
-    pan: !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(form.pan),
-    aadhaar: !/^\d{12}$/.test(form.aadhaar),
-  };
-
-  const isValid = !Object.values(errors).includes(true);
+  const [touched, setTouched] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: name === "pan" ? value.toUpperCase() : value });
   };
+
+  const handleBlur = (e) => {
+    setTouched({ ...touched, [e.target.name]: true });
+  };
+
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
+  const panValid = /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(form.pan);
+  const aadhaarValid = /^\d{12}$/.test(form.aadhaar);
+
+  const showError = (field) => touched[field] || submitted;
+
+  const isValid =
+    form.firstName &&
+    form.lastName &&
+    form.username &&
+    emailValid &&
+    form.password.length >= 6 &&
+    form.phone.length >= 10 &&
+    form.country &&
+    form.city &&
+    panValid &&
+    aadhaarValid;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setSubmitted(true);
     if (isValid) navigate("/details", { state: form });
   };
 
-  const inputStyle = (err) => ({
-    padding: "10px",
-    border: err ? "1px solid #000" : "1px solid #ccc",
-    borderRadius: "6px",
+  const inputStyle = {
     width: "100%",
-  });
+    padding: "10px",
+    border: "1px solid black",
+    borderRadius: "6px",
+  };
+
+  const error = (condition, message) =>
+    condition && <small style={{ color: "red" }}>{message}</small>;
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 420, margin: "40px auto", display: "grid", gap: 12 }}>
-      <h2 style={{ textAlign: "center", marginBottom: 10 }}>Registration Form</h2>
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        maxWidth: 450,
+        margin: "40px auto",
+        padding: 20,
+        border: "1px solid #ddd",
+        borderRadius: 10,
+        display: "grid",
+        gap: 12,
+      }}
+    >
+      <h2 style={{ textAlign: "center" }}>Registration Form</h2>
 
-      <input name="firstName" placeholder="First Name" onChange={handleChange} style={inputStyle(errors.firstName)} />
-      {errors.firstName && <small style={{ color: "red" }}>Required</small>}
+      <input name="firstName" placeholder="First Name" onChange={handleChange} onBlur={handleBlur} style={inputStyle} />
+      {error(showError("firstName") && !form.firstName, "Required")}
 
-      <input name="lastName" placeholder="Last Name" onChange={handleChange} style={inputStyle(errors.lastName)} />
-      {errors.lastName && <small style={{ color: "red" }}>Required</small>}
+      <input name="lastName" placeholder="Last Name" onChange={handleChange} onBlur={handleBlur} style={inputStyle} />
+      {error(showError("lastName") && !form.lastName, "Required")}
 
-      <input name="username" placeholder="Username" onChange={handleChange} style={inputStyle(errors.username)} />
-      {errors.username && <small style={{ color: "red" }}>Required</small>}
+      <input name="username" placeholder="Username" onChange={handleChange} onBlur={handleBlur} style={inputStyle} />
+      {error(showError("username") && !form.username, "Required")}
 
-      <input name="email" placeholder="Email" onChange={handleChange} style={inputStyle(errors.email)} />
-      {errors.email && <small style={{ color: "red" }}>Invalid Email</small>}
+      <input name="email" placeholder="Email" onChange={handleChange} onBlur={handleBlur} style={inputStyle} />
+      {error(showError("email") && !form.email, "Required")}
+      {error(showError("email") && form.email && !emailValid, "Invalid Email")}
 
       <div style={{ display: "flex", gap: 8 }}>
         <input
@@ -71,33 +105,50 @@ const FormPage = () => {
           name="password"
           placeholder="Password"
           onChange={handleChange}
-          style={inputStyle(errors.password)}
+          onBlur={handleBlur}
+          style={inputStyle}
         />
         <button type="button" onClick={() => setShowPwd(!showPwd)}>
           {showPwd ? "Hide" : "Show"}
         </button>
       </div>
-      {errors.password && <small style={{ color: "red" }}>Min 6 chars</small>}
+      {error(showError("password") && !form.password, "Required")}
+      {error(showError("password") && form.password && form.password.length < 6, "Minimum 6 characters")}
 
       <div style={{ display: "flex", gap: 8 }}>
-        <input name="countryCode" value={form.countryCode} onChange={handleChange} style={{ width: 70 }} />
-        <input name="phone" placeholder="Phone Number" onChange={handleChange} style={inputStyle(errors.phone)} />
+        <input value="+91" readOnly style={{ ...inputStyle, width: 70 }} />
+        <input name="phone" placeholder="Phone Number" onChange={handleChange} onBlur={handleBlur} style={inputStyle} />
       </div>
-      {errors.phone && <small style={{ color: "red" }}>Invalid Phone</small>}
+      {error(showError("phone") && !form.phone, "Required")}
+      {error(showError("phone") && form.phone && form.phone.length < 10, "Invalid Phone Number")}
 
-      <input name="country" placeholder="Country" onChange={handleChange} style={inputStyle(errors.country)} />
-      {errors.country && <small style={{ color: "red" }}>Required</small>}
+      <input name="country" placeholder="Country" onChange={handleChange} onBlur={handleBlur} style={inputStyle} />
+      {error(showError("country") && !form.country, "Required")}
 
-      <input name="city" placeholder="City" onChange={handleChange} style={inputStyle(errors.city)} />
-      {errors.city && <small style={{ color: "red" }}>Required</small>}
+      <input name="city" placeholder="City" onChange={handleChange} onBlur={handleBlur} style={inputStyle} />
+      {error(showError("city") && !form.city, "Required")}
 
-      <input name="pan" placeholder="PAN" onChange={handleChange} style={inputStyle(errors.pan)} />
-      {errors.pan && <small style={{ color: "red" }}>Invalid PAN</small>}
+      <input name="pan" placeholder="PAN" onChange={handleChange} onBlur={handleBlur} style={inputStyle} />
+      {error(showError("pan") && !form.pan, "Required")}
+      {error(showError("pan") && form.pan && !panValid, "Invalid PAN")}
 
-      <input name="aadhaar" placeholder="Aadhaar" onChange={handleChange} style={inputStyle(errors.aadhaar)} />
-      {errors.aadhaar && <small style={{ color: "red" }}>Invalid Aadhaar</small>}
+      <input name="aadhaar" placeholder="Aadhaar" onChange={handleChange} onBlur={handleBlur} style={inputStyle} />
+      {error(showError("aadhaar") && !form.aadhaar, "Required")}
+      {error(showError("aadhaar") && form.aadhaar && !aadhaarValid, "Invalid Aadhaar")}
 
-      <button disabled={!isValid} style={{ padding: 12, background: isValid ? "#2563eb" : "#999", color: "#fff" }}>
+      <button
+        type="submit"
+        style={{
+          marginTop: 10,
+          padding: 12,
+          width: "100%",
+          background: "#2563eb",
+          color: "#fff",
+          border: "none",
+          borderRadius: 6,
+          cursor: "pointer",
+        }}
+      >
         Submit
       </button>
     </form>
@@ -106,33 +157,27 @@ const FormPage = () => {
 
 const DetailsPage = () => {
   const { state } = useLocation();
-  if (!state) return <p style={{ textAlign: "center" }}>No data submitted</p>;
+  if (!state) return <p>No data submitted</p>;
 
-  const row = (label, value) => (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "150px 1fr",
-      padding: "8px 0",
-      borderBottom: "1px solid #eee",
-      columnGap: "16px"
-    }}>
-      <strong>{label}</strong>
-      <span style={{ wordBreak: "break-word" }}>{value}</span>
+  const row = (l, v) => (
+    <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", padding: "6px 0" }}>
+      <strong>{l}</strong>
+      <span>{v}</span>
     </div>
   );
 
   return (
-    <div style={{ maxWidth: 500, margin: "40px auto", padding: 20, border: "1px solid #ddd", borderRadius: 8 }}>
-      <h2 style={{ textAlign: "center", marginBottom: 20 }}>Submitted Details</h2>
-      {row("First Name", state.firstName)}
-      {row("Last Name", state.lastName)}
-      {row("Username", state.username)}
-      {row("Email", state.email)}
-      {row("Phone", `${state.countryCode} ${state.phone}`)}
-      {row("Country", state.country)}
-      {row("City", state.city)}
-      {row("PAN", state.pan)}
-      {row("Aadhaar", state.aadhaar)}
+    <div style={{ maxWidth: 500, margin: "40px auto", padding: 20, border: "1px solid #ddd", borderRadius: 10 }}>
+      <h2 style={{ textAlign: "center" }}>Submitted Details</h2>
+      {row("First Name:", state.firstName)}
+      {row("Last Name:", state.lastName)}
+      {row("Username:", state.username)}
+      {row("Email:", state.email)}
+      {row("Phone:", `${state.countryCode} ${state.phone}`)}
+      {row("Country:", state.country)}
+      {row("City:", state.city)}
+      {row("PAN:", state.pan)}
+      {row("Aadhaar:", state.aadhaar)}
     </div>
   );
 };
